@@ -5,7 +5,7 @@ GET  /sop/ingest/jobs/{id}    — poll job status
 
 customer_id is extracted from the JWT only — never from the request body.
 The heavy work (parse / chunk / embed) is never done here; it is enqueued
-for the worker process (Process 2) to handle asynchronously.
+for the ingestion worker service to handle asynchronously.
 """
 
 import hashlib

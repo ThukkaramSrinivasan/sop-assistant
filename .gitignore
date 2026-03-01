@@ -34,4 +34,13 @@ htmlcov/
 
 # Uploaded files (local dev storage)
 uploads/
+
+# Claude Code session files
 .claude/
+.claude/memory/
+
+# Per-project memory directory (used by Claude Code auto memory)
+memory/
+
+# Compiled Python (explicit, also covered by *.py[cod] above)
+*.pyc

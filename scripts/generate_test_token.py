@@ -1,36 +1,67 @@
 #!/usr/bin/env python3
-"""Generate a signed JWT for manual API testing.
+"""Generate signed JWTs for the two seed users for manual API testing.
 
-Reads JWT_SECRET and JWT_ALGORITHM from the project .env file and prints
-a bearer token together with the embedded customer_id.
+Prerequisites:
+    docker-compose up -d
+    alembic upgrade head
+    python scripts/seed.py
+
+Connects to the database, looks up alice@apollo.com and bob@legalcorp.com,
+and prints a ready-to-use Bearer token for each.  If neither user is found,
+run the seed script first — this script never generates tokens with fake IDs.
 
 Usage (from the project root):
     python scripts/generate_test_token.py
 """
 
+import asyncio
 import sys
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Ensure the project root is on sys.path so that app.* imports work even when
-# the script is executed directly (not via `python -m`).
-# ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from uuid import UUID
+from sqlalchemy import select
 
-from jose import jwt
+from app.core.database import AsyncSessionLocal
+from app.core.security import create_access_token
+from app.models.customer import Customer
+from app.models.user import User
 
-from app.core.config import settings
+_SEED_EMAILS = ["alice@apollo.com", "bob@legalcorp.com"]
 
-# Fixed customer_id used across all manual test requests.
-# Copy this value when seeding the customers table or constructing curl calls.
-TEST_CUSTOMER_ID: UUID = UUID("00000000-0000-0000-0000-000000000001")
 
-payload = {"customer_id": str(TEST_CUSTOMER_ID)}
+async def _generate_tokens() -> None:
+    found_any = False
 
-token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    async with AsyncSessionLocal() as db:
+        for email in _SEED_EMAILS:
+            user_result = await db.execute(select(User).where(User.email == email))
+            user = user_result.scalars().first()
 
-print(f"customer_id : {TEST_CUSTOMER_ID}")
-print(f"Bearer token: {token}")
+            if user is None:
+                print(f"  User not found: {email}  (run: python scripts/seed.py)")
+                continue
+
+            customer_result = await db.execute(
+                select(Customer).where(Customer.id == user.customer_id)
+            )
+            customer = customer_result.scalars().first()
+            customer_name = customer.name if customer else str(user.customer_id)
+
+            token = create_access_token(user_id=user.id, customer_id=user.customer_id)
+
+            print(f"Token for {email} ({customer_name}):")
+            print(f"  Bearer {token}")
+            print()
+            found_any = True
+
+    if not found_any:
+        print("No seed users found in the database.")
+        print("Run the seed script first:")
+        print("    python scripts/seed.py")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    asyncio.run(_generate_tokens())

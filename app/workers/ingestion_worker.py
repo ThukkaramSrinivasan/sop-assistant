@@ -1,4 +1,4 @@
-"""Ingestion worker — Process 2.
+"""Ingestion worker — the worker Docker service.
 
 Runs as a standalone async process entirely separate from the FastAPI server.
 Polls the ingestion_jobs table for queued work, processes each job (parse →
@@ -7,8 +7,8 @@ chunk → embed → store), and sleeps when the queue is empty.
 Job claiming uses FOR UPDATE SKIP LOCKED so multiple worker instances can run
 concurrently without double-processing a job.
 
-Run with:
-    python -m app.workers.ingestion_worker
+Started via docker-compose:
+    docker-compose up worker
 """
 
 import asyncio

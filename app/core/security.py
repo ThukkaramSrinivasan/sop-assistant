@@ -59,7 +59,6 @@ def _decode_token(token: str) -> dict:
 
 # ---------------------------------------------------------------------------
 # Dependency: customer_id only (stateless — no DB round-trip)
-# Compatible with both old tokens {customer_id} and new tokens {user_id, customer_id}
 # ---------------------------------------------------------------------------
 
 
@@ -68,9 +67,8 @@ async def get_current_customer_id(
 ) -> UUID:
     """FastAPI dependency — extracts customer_id from JWT.
 
-    Works with both token formats:
-      Legacy:  { "customer_id": "..." }
-      Current: { "user_id": "...", "customer_id": "...", "exp": ... }
+    All tokens must contain both user_id and customer_id — issued exclusively
+    by POST /api/v1/auth/login after bcrypt password verification.
 
     customer_id is NEVER accepted from the request body or query params.
     """
