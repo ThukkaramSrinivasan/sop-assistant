@@ -88,6 +88,35 @@ async def ingest_document(
     file_hash = hashlib.sha256(contents).hexdigest()
     original_filename = file.filename or "document.pdf"
 
+    # --- Version lookup: is this an update to an existing document? -----------
+    # Find the most recent active document with the same filename for this
+    # customer.  If one exists this is a document update — bump the version and
+    # soft-delete the old record so it no longer appears as the active copy.
+    prev_result = await db.execute(
+        select(Document)
+        .where(
+            Document.customer_id == customer_id,
+            Document.filename == original_filename,
+            Document.is_active.is_(True),
+        )
+        .order_by(Document.version.desc())
+        .limit(1)
+    )
+    prev_doc = prev_result.scalars().first()
+
+    if prev_doc is not None:
+        new_version = prev_doc.version + 1
+        prev_doc.is_active = False
+        logger.info(
+            "Versioning: %r v%d (document=%s) superseded — creating v%d",
+            original_filename,
+            prev_doc.version,
+            prev_doc.id,
+            new_version,
+        )
+    else:
+        new_version = 1
+
     # --- Persist document record and save file to disk ------------------------
     document_id = uuid4()
 
@@ -102,6 +131,7 @@ async def ingest_document(
         filename=original_filename,
         file_hash=file_hash,
         status=DocumentStatus.pending,
+        version=new_version,
     )
     db.add(document)
 

@@ -94,11 +94,17 @@ async def upsert_chunks(
     chunks: list[ChunkData],
     embeddings: list[list[float]],
     db: AsyncSession,
+    prev_document_id: UUID | None = None,
 ) -> None:
     """Persist DocumentChunk rows with embeddings.
 
     Soft-deletes any pre-existing active chunks for this document before
     inserting, so a retried ingestion job never produces duplicate rows.
+
+    Also soft-deletes all active chunks belonging to the previous document
+    version (if one exists) so that RAG queries no longer return stale content
+    from the superseded SOP.  prev_document_id can be supplied by the caller;
+    when omitted it is derived from the current document's version number.
     """
     # Soft-delete any chunks from a previous (partial) attempt on this document.
     existing = await db.execute(
@@ -126,6 +132,45 @@ async def upsert_chunks(
                 embedded_at=now,
             )
         )
+
+    # --- Soft-delete the superseded version's chunks -------------------------
+    # When prev_document_id is not supplied by the caller, derive it by loading
+    # the current document and looking up the previous version (version - 1)
+    # for the same filename + customer.  This keeps the worker call-site
+    # unchanged while still deactivating stale chunks automatically.
+    if prev_document_id is None:
+        cur_result = await db.execute(
+            select(Document).where(Document.id == document_id)
+        )
+        current_doc = cur_result.scalars().first()
+        if current_doc is not None and current_doc.version > 1:
+            prev_ver_result = await db.execute(
+                select(Document).where(
+                    Document.customer_id == customer_id,
+                    Document.filename == current_doc.filename,
+                    Document.version == current_doc.version - 1,
+                )
+            )
+            prev_ver_doc = prev_ver_result.scalars().first()
+            if prev_ver_doc is not None:
+                prev_document_id = prev_ver_doc.id
+
+    if prev_document_id is not None:
+        stale_result = await db.execute(
+            select(DocumentChunk).where(
+                DocumentChunk.document_id == prev_document_id,
+                DocumentChunk.is_active.is_(True),
+            )
+        )
+        stale_chunks = stale_result.scalars().all()
+        for stale_chunk in stale_chunks:
+            stale_chunk.is_active = False
+        if stale_chunks:
+            logger.info(
+                "Soft-deleted %d stale chunk(s) for superseded document %s",
+                len(stale_chunks),
+                prev_document_id,
+            )
 
     await db.commit()
     logger.info("Upserted %d chunks for document %s", len(chunks), document_id)

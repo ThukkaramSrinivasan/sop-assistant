@@ -99,6 +99,11 @@ Ingestion spans both processes:
 ### Deliverable
 Upload a PDF → poll job status → status becomes `completed` → chunks with embeddings exist in DB.
 
+> **Note (post-implementation):** Versioning logic added after test_versioning.py revealed that
+> version and is_active fields existed in the schema but were not populated correctly by ingest.py.
+> Fixed by adding a filename lookup before document creation and soft-deleting old chunks after
+> new embeddings are stored.
+
 ---
 
 ## Phase 3: RAG Query Pipeline

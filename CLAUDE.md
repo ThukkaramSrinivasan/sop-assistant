@@ -165,6 +165,16 @@ Always explicitly map to an API schema.
 - Never hard-delete documents or chunks — soft delete using `is_active = False`.
 - Worker polls with `FOR UPDATE SKIP LOCKED` — never poll without this.
 
+### Document Versioning
+Document versioning is implemented in app/api/v1/ingest.py:
+- On upload, query for existing active document with same filename + customer_id
+- If found: set new version = prev.version + 1, mark prev is_active = false
+- If not found: set version = 1
+- After new chunks are embedded, soft-delete old chunks via
+  is_active = false WHERE document_id = prev_document_id
+- file_hash dedup check runs before versioning — identical content
+  is skipped entirely without creating a new version
+
 ### Code Style
 - Type hints on all function signatures.
 - One responsibility per service function.
