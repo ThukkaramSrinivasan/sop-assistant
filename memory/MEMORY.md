@@ -45,9 +45,17 @@ uvicorn app.main:app --reload --port 8000  # API server
 python -m app.workers.ingestion_worker     # worker
 ```
 
-## Phase 2 Will Add
-- app/services/ingestion/parser.py (pdfplumber)
-- app/services/ingestion/chunker.py (tiktoken, 512 tokens, 50 overlap)
-- app/services/ingestion/embedder.py (OpenAI batched calls, file_hash dedup)
-- app/workers/ingestion_worker.py (FOR UPDATE SKIP LOCKED polling loop)
-- app/api/v1/ingest.py endpoints (POST /sop/ingest, GET /sop/ingest/jobs/{id})
+## Phase 2 Complete
+- parser.py: PDFParseError + extract_text_from_pdf (pdfplumber, handles empty/corrupt)
+- chunker.py: ChunkData dataclass + chunk_text with paragraph-aware algorithm
+  - Splits on \n\n first, greedily accumulates, flushes at chunk_size with overlap tail carry-over
+  - Sub-splits oversized paragraphs via push() helper
+  - Overlap check: use enc.decode(enc.encode(tail)[-N:]) then find in next chunk TEXT (not re-encoded tokens — BPE is context-sensitive at boundaries)
+- embedder.py: embed_chunks (batched ≤100, sorts by index), should_skip_ingestion (checks completed docs by file_hash+customer_id), upsert_chunks (soft-deletes stale chunks first)
+- ingestion_worker.py: claim_next_job (FOR UPDATE SKIP LOCKED), process_job (dedup → process → complete), _mark_job_failed (fresh session for safety), run_worker loop
+- ingest.py: POST /sop/ingest (202, PDF magic check, 10MB limit, saves to uploads/{customer_id}/{document_id}.pdf), GET /sop/ingest/jobs/{job_id}
+- UPLOAD_DIR = Path("uploads") defined in BOTH ingest.py and ingestion_worker.py — must stay in sync
+
+## Phase 3 Will Add
+- app/services/rag/retriever.py, prompt.py, generator.py
+- app/api/v1/query.py endpoints (POST /sop/query, GET /sop/responses/{id})

@@ -34,3 +34,4 @@ htmlcov/
 
 # Uploaded files (local dev storage)
 uploads/
+.claude/
