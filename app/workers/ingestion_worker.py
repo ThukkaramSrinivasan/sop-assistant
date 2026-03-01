@@ -31,6 +31,9 @@ from app.services.ingestion.parser import PDFParseError, extract_pages_from_pdf
 logger = logging.getLogger(__name__)
 
 # Must match the path used by the ingest API endpoint.
+# In production this should be replaced with object storage (S3/GCS) — the API
+# uploads to the bucket, the worker downloads from it using the key stored in
+# the DB.  Local disk storage only works when API and worker share a filesystem.
 UPLOAD_DIR = Path("uploads")
 
 

@@ -312,6 +312,7 @@ reconstruct the source list.
 | Tenant isolation | `customer_id` filter on every query + RLS policy on `document_chunks` + `customer_id` extracted from JWT only, never from request body | Separate DB per tenant | Cost-effective; enforced at three independent layers — auth, application, and database |
 | DB / API models | Strictly separate | SQLModel dual-use | Clean boundary — DB internals (embeddings, file hashes) never leak to consumers |
 | Source relevance | LLM-emitted `SOURCES_USED` marker | Score threshold / phrase matching | The LLM itself knows whether it answered from context; hardcoded thresholds are brittle and require ongoing tuning |
+| File storage ⚠️ | Local disk (named Docker volume) | S3/GCS object storage | **Known limitation.** 200 PDFs × 5MB × 1000 customers ≈ 1TB; local disk cannot be shared across scaled API instances and has no redundancy. Production path: stream uploads to S3/GCS, store the key in the DB, worker downloads at processing time (~$23/month for 1TB on S3) |
 | Local development | `docker-compose up --build` (all services) | Running API, worker, frontend manually | Single command to start all three services eliminates environment drift and matches the production deployment model |
 
 ---

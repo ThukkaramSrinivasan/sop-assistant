@@ -31,6 +31,7 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
+      - uploads_data:/app/uploads
 
   worker:
     build: .
@@ -44,6 +45,7 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
+      - uploads_data:/app/uploads
     restart: unless-stopped
 
   frontend:
@@ -60,3 +62,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

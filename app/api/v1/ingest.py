@@ -8,6 +8,17 @@ The heavy work (parse / chunk / embed) is never done here; it is enqueued
 for the ingestion worker service to handle asynchronously.
 """
 
+# FILE STORAGE — KNOWN LIMITATION
+# Current implementation saves PDFs to a local Docker volume (uploads/).
+# This works for development but does not scale to production requirements:
+# - 200 PDFs × 5MB × 1000 customers ≈ 1TB total storage
+# - Local disk cannot be shared across horizontally scaled API instances
+# - No redundancy — disk failure means data loss
+#
+# Production approach: stream uploads directly to object storage (AWS S3 / GCS)
+# API stores the S3 key in the DB, worker downloads from S3 at processing time.
+# This decouples file storage from compute, scales infinitely, and costs ~$23/month for 1TB.
+
 import hashlib
 import logging
 from pathlib import Path
@@ -28,6 +39,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Must match the path used in the worker.
+# In production this should be replaced with object storage (S3/GCS) — the API
+# uploads to the bucket, the worker downloads from it using the key stored in
+# the DB.  Local disk storage only works when API and worker share a filesystem.
 UPLOAD_DIR = Path("uploads")
 
 _PDF_MAGIC = b"%PDF"

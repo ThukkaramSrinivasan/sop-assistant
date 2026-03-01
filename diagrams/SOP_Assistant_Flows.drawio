@@ -1,0 +1,286 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.1.1 Chrome/132.0.6834.210 Electron/34.3.3 Safari/537.36" version="26.1.1">
+  <diagram id="-wsAdrghvjg0AXWWD_ns" name="Page-1">
+    <mxGraphModel dx="1857" dy="1377" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" value="PDF INGESTION FLOW" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="50" y="20" width="400" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="title2" value="USER QUERY FLOW" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="927" y="20" width="400" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="i1" value="User selects PDF in UI" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="130" y="80" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="i2" value="POST /api/v1/sop/ingest&#xa;HTTPS + JWT Bearer token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="165" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="i3" value="Extract customer_id from JWT&#xa;(never from request body)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="240" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="i4" value="Validate File&#xa;Magic bytes = %PDF?&#xa;Size ≤ 10MB?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="105" y="320" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="i5" value="Return 400 Bad Request&#xa;(invalid type or size)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="420" y="338" width="180" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i6" value="Compute SHA-256 hash&#xa;of file contents" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="430" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i7" value="Hash already ingested&#xa;for this customer?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="105" y="504" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="i8" value="Return 202 Accepted&#xa;(skipped — duplicate content)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="420" y="520" width="200" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i9" value="Save PDF to File Storage&#xa;(Docker volume / S3 in production)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="604" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i10" value="Create document record in Postgres&#xa;status: pending" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="668" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i11" value="Create ingestion_job in Postgres&#xa;status: queued" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="732" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i12" value="Return 202 Accepted&#xa;{ job_id, document_id, status: queued }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="796" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i13" value="━━━━━ASYNC BOUNDARY ━━━━━━&lt;br&gt;HTTP response returned. Background work begins." style="text;html=1;strokeColor=#FF8000;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;fontStyle=2;fontColor=#FF8000;" parent="1" vertex="1">
+          <mxGeometry x="80" y="858" width="300" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i14" value="Worker polls ingestion_jobs&#xa;(FOR UPDATE SKIP LOCKED, every 5s)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="922" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i15" value="Job found?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="130" y="990" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5Co_tH0USZ_0RGYJnJTD-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;curved=0;" edge="1" parent="1" source="i16" target="i14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="i16" value="Sleep 5s&#xa;poll again" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="410" y="998" width="120" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i17" value="Mark job status: processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1074" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i18" value="Read PDF from File Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1138" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i19" value="Extract text page by page&#xa;(pdfplumber, track page_number)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1202" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i20" value="Chunk text&#xa;(512 tokens, 50 overlap, paragraph-aware)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1266" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i21" value="Batch embed chunks&#xa;→ OpenAI text-embedding-3-small&#xa;(max 100 chunks per API call)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1330" width="240" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="i22" value="Soft-delete existing active chunks&#xa;for this document (safe retry)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1404" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i23" value="Upsert chunks to Postgres&#xa;(chunk_text, embedding vector,&#xa;page_number, customer_id)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1468" width="240" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="i24" value="Mark document + job status: completed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="110" y="1542" width="240" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i25" value="END" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="175" y="1606" width="110" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="i26" value="Mark status: failed&#xa;Store error_message&#xa;Worker loop continues" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="420" y="1537" width="180" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="ia1" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i1" target="i2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia2" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i2" target="i3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia3" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i3" target="i4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia4" value="FAIL" style="edgeStyle=orthogonalEdgeStyle;fontColor=#b85450;fontStyle=1;" parent="1" source="i4" target="i5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia5" value="PASS" style="edgeStyle=orthogonalEdgeStyle;fontColor=#82b366;fontStyle=1;" parent="1" source="i4" target="i6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia6" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i6" target="i7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia7" value="YES" style="edgeStyle=orthogonalEdgeStyle;fontColor=#82b366;fontStyle=1;" parent="1" source="i7" target="i8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia8" value="NO" style="edgeStyle=orthogonalEdgeStyle;fontColor=#b85450;fontStyle=1;" parent="1" source="i7" target="i9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia9" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i9" target="i10" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia10" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i10" target="i11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia11" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i11" target="i12" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia12" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i12" target="i13" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia13" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i13" target="i14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia14" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i14" target="i15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia15" value="NO" style="edgeStyle=orthogonalEdgeStyle;fontColor=#b85450;fontStyle=1;" parent="1" source="i15" target="i16" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia16" value="YES" style="edgeStyle=orthogonalEdgeStyle;fontColor=#82b366;fontStyle=1;" parent="1" source="i15" target="i17" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia17" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i17" target="i18" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia18" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i18" target="i19" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia19" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i19" target="i20" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia20" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i20" target="i21" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia21" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i21" target="i22" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia22" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i22" target="i23" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia23" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i23" target="i24" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia24" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="i24" target="i25" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ia25" value="FAIL" style="edgeStyle=orthogonalEdgeStyle;fontColor=#b85450;fontStyle=1;" parent="1" source="i24" target="i26" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q1" value="User types question in Chat UI" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="997" y="80" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="q2" value="POST /api/v1/sop/query&#xa;{ query: &quot;...&quot; } + HTTPS + JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="160" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="q3" value="Extract customer_id from JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="234" width="260" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="q4" value="Validate request&#xa;query field present? token valid?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="982" y="308" width="270" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="q5" value="Return 401 / 422" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1317" y="320" width="150" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="q6" value="Embed query text&#xa;→ OpenAI text-embedding-3-small&#xa;→ returns vector (1536 dims)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="408" width="260" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="q7" value="pgvector cosine similarity search&#xa;WHERE customer_id = :id  ← tenant isolation&#xa;ORDER BY embedding &lt;=&gt; query_vector&#xa;LIMIT 5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="492" width="260" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q8" value="Returns top 5 chunks&#xa;{ chunk_text, filename, page_number,&#xa;similarity_score, chunk_id }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="586" width="260" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="q9" value="Build prompt:&#xa;System: &quot;Use ONLY provided context.&#xa;Do not use outside knowledge.&#xa;Cite sources as [Source N].&#xa;End with SOURCES_USED: true/false&quot;&#xa;+ numbered context blocks&#xa;+ user query" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="670" width="260" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="q10" value="Call Anthropic API&#xa;model: claude-sonnet-4-20250514&#xa;temperature: 0 (deterministic)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="804" width="260" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="q11" value="Parse raw LLM response:&#xa;- Extract SOURCES_USED: true/false&#xa;- Strip marker from answer text&#xa;- Set sources_relevant boolean" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="888" width="260" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="q12" value="Store audit record in Postgres:&#xa;prompt_sent (verbatim)&#xa;retrieved_chunk_ids (array)&#xa;model_name, temperature&#xa;response_text, sources_relevant&#xa;latency_ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="982" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="q13" value="Build API response:&#xa;{ response_id, answer, sources,&#xa;model, sources_relevant, generated_at }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="1106" width="260" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="q14" value="UI renders:&#xa;- Answer as formatted markdown&#xa;- Source chips (filename — Page N)&#xa;  only if sources_relevant = true&#xa;- Click chip → popover shows chunk_text" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="987" y="1190" width="260" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="q15" value="END" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1062" y="1304" width="110" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="qa1" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q1" target="q2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa2" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q2" target="q3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa3" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q3" target="q4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa4" value="FAIL" style="edgeStyle=orthogonalEdgeStyle;fontColor=#b85450;fontStyle=1;" parent="1" source="q4" target="q5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa5" value="PASS" style="edgeStyle=orthogonalEdgeStyle;fontColor=#82b366;fontStyle=1;" parent="1" source="q4" target="q6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa6" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q6" target="q7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa7" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q7" target="q8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa8" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q8" target="q9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa9" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q9" target="q10" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa10" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q10" target="q11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa11" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q11" target="q12" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa12" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q12" target="q13" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa13" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q13" target="q14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qa14" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="q14" target="q15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leg0" value="LEGEND" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="750" y="460" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="UI / HTTP layer" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="700" y="500" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="Decision / Validation" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="700" y="542" width="160" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="External API call" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="700" y="598" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="Database operation" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="700" y="640" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="Worker processing" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="700" y="682" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg6" value="Error path" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="700" y="724" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg7" value="Success / End" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="700" y="766" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="5Co_tH0USZ_0RGYJnJTD-2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="680" y="450" width="210" height="370" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
