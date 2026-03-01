@@ -133,8 +133,6 @@ async def ingest_document(
         status=DocumentStatus.pending,
         version=new_version,
     )
-    db.add(document)
-
     # --- Enqueue the ingestion job --------------------------------------------
     job = IngestionJob(
         document_id=document_id,
