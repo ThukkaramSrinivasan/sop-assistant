@@ -117,6 +117,7 @@ async def upsert_chunks(
                 document_id=document_id,
                 customer_id=customer_id,
                 chunk_index=chunk.chunk_index,
+                page_number=chunk.page_number,
                 chunk_text=chunk.chunk_text,
                 token_count=chunk.token_count,
                 embedding=embedding,

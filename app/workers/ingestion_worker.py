@@ -24,9 +24,9 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.document import Document, DocumentStatus
 from app.models.ingestion_job import IngestionJob, JobStatus
-from app.services.ingestion.chunker import chunk_text
+from app.services.ingestion.chunker import chunk_pages
 from app.services.ingestion.embedder import embed_chunks, should_skip_ingestion, upsert_chunks
-from app.services.ingestion.parser import PDFParseError, extract_text_from_pdf
+from app.services.ingestion.parser import PDFParseError, extract_pages_from_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -108,10 +108,10 @@ async def process_job(job: IngestionJob, db: AsyncSession) -> None:
 
     # 4. Parse.
     filepath = str(UPLOAD_DIR / str(document.customer_id) / f"{document.id}.pdf")
-    text = extract_text_from_pdf(filepath)  # raises PDFParseError on failure
+    pages = extract_pages_from_pdf(filepath)  # raises PDFParseError on failure
 
     # 5. Chunk.
-    chunks = chunk_text(text, settings.chunk_size_tokens, settings.chunk_overlap_tokens)
+    chunks = chunk_pages(pages, settings.chunk_size_tokens, settings.chunk_overlap_tokens)
     if not chunks:
         raise ValueError(f"PDF '{document.filename}' produced no text chunks after parsing")
 

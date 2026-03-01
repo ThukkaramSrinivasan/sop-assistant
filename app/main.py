@@ -2,9 +2,10 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import ingest, query
+from app.api.v1 import auth, documents, ingest, query
 from app.core.logging_config import configure_logging
 
 configure_logging()
@@ -17,7 +18,26 @@ app = FastAPI(
     description="Multi-tenant AI backend for SOP (Standard Operating Procedure) analysis.",
 )
 
+# ---------------------------------------------------------------------------
+# CORS — must be registered before routers so preflight OPTIONS requests are
+# intercepted by the middleware before any route handler runs.
+# ---------------------------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(ingest.router, prefix="/api/v1/sop", tags=["ingest"])
+app.include_router(documents.router, prefix="/api/v1/sop", tags=["documents"])
 app.include_router(query.router, prefix="/api/v1/sop", tags=["query"])
 
 

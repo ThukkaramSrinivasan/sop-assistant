@@ -19,6 +19,7 @@ class DocumentChunk(SQLModel, table=True):
     # Denormalized customer_id — enables efficient tenant-scoped queries without joins
     customer_id: UUID = Field(nullable=False)
     chunk_index: int = Field(nullable=False)
+    page_number: Optional[int] = Field(default=None)
     chunk_text: str = Field(nullable=False)
     token_count: int = Field(nullable=False)
     # vector(1536) via pgvector — internal, never exposed via API

@@ -25,6 +25,9 @@ class AIResponse(SQLModel, table=True):
     # Always 0 — stored for auditability, confirms deterministic generation
     model_temperature: float = Field(nullable=False)
     response_text: str = Field(nullable=False)
+    # True when the LLM answered from context; False on out-of-scope refusals.
+    # NULL for records created before this field was added.
+    sources_relevant: Optional[bool] = Field(default=None)
     confidence_score: Optional[float] = Field(default=None)
     latency_ms: int = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

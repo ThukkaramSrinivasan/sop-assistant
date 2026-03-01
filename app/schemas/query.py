@@ -18,6 +18,8 @@ class SourceCitation(BaseModel):
     document_filename: str
     chunk_index: int
     relevance_score: float
+    page_number: Optional[int] = None
+    chunk_text: str
 
 
 class QueryResponse(BaseModel):
@@ -25,6 +27,7 @@ class QueryResponse(BaseModel):
 
     response_id: UUID
     answer: str
+    sources_relevant: bool
     sources: list[SourceCitation]
     model: str
     generated_at: datetime

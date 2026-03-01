@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Enable class-based dark mode (Tailwind v4 defaults to media query) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Ensure the full viewport is covered by the theme background */
+html,
+body {
+  min-height: 100%;
+}

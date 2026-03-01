@@ -37,6 +37,7 @@ class RetrievedChunk:
     document_filename: str
     chunk_index: int
     similarity_score: float
+    page_number: int | None = None
 
 
 async def embed_query(query_text: str) -> list[float]:
@@ -83,6 +84,7 @@ async def retrieve_chunks(
             DocumentChunk.id,
             DocumentChunk.chunk_text,
             DocumentChunk.chunk_index,
+            DocumentChunk.page_number,
             Document.filename,
             (1 - distance_expr).label("similarity"),
         )
@@ -106,6 +108,7 @@ async def retrieve_chunks(
             document_filename=row.filename,
             chunk_index=row.chunk_index,
             similarity_score=float(row.similarity),
+            page_number=row.page_number,
         )
         for row in rows
     ]

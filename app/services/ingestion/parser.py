@@ -1,6 +1,6 @@
 """PDF text extraction using pdfplumber.
 
-Single responsibility: turn a file path into a plain-text string.
+Single responsibility: turn a file path into a list of (page_text, page_number) pairs.
 All error cases raise PDFParseError so the worker can handle them uniformly.
 """
 
@@ -16,11 +16,11 @@ class PDFParseError(Exception):
     """Raised when a PDF cannot be parsed or yields no extractable text."""
 
 
-def extract_text_from_pdf(filepath: str) -> str:
-    """Extract plain text from a PDF file.
+def extract_pages_from_pdf(filepath: str) -> list[tuple[str, int]]:
+    """Extract text from a PDF, returning one entry per page that has content.
 
-    Concatenates text from all pages, separated by double newlines so that
-    the chunker can later split on paragraph boundaries.
+    Returns:
+        List of (page_text, page_number) tuples. page_number is 1-indexed.
 
     Raises:
         PDFParseError: if the file does not exist, is corrupt, is encrypted,
@@ -35,25 +35,26 @@ def extract_text_from_pdf(filepath: str) -> str:
             if not pdf.pages:
                 raise PDFParseError(f"PDF has no pages: {filepath}")
 
-            page_texts: list[str] = []
+            pages: list[tuple[str, int]] = []
             for i, page in enumerate(pdf.pages):
                 try:
                     text = page.extract_text()
                 except Exception as page_exc:
-                    logger.warning("Could not extract text from page %d of %s: %s", i, filepath, page_exc)
+                    logger.warning(
+                        "Could not extract text from page %d of %s: %s", i + 1, filepath, page_exc
+                    )
                     continue
                 if text and text.strip():
-                    page_texts.append(text.strip())
+                    pages.append((text.strip(), i + 1))  # page_number is 1-indexed
 
     except PDFParseError:
         raise
     except Exception as exc:
-        # Catches pdfplumber errors for encrypted, corrupt, or truncated files.
         raise PDFParseError(f"Failed to open or read PDF '{filepath}': {exc}") from exc
 
-    full_text = "\n\n".join(page_texts).strip()
-    if not full_text:
+    if not pages:
         raise PDFParseError(f"PDF '{filepath}' contains no extractable text")
 
-    logger.debug("Extracted %d characters from %s", len(full_text), filepath)
-    return full_text
+    total_chars = sum(len(t) for t, _ in pages)
+    logger.debug("Extracted %d characters across %d pages from %s", total_chars, len(pages), filepath)
+    return pages

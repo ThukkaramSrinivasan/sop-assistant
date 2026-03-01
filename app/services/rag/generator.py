@@ -75,7 +75,25 @@ async def generate(
         messages=[{"role": "user", "content": prompt}],
     )
     latency_ms = int((time.monotonic() - t0) * 1000)
-    answer = response.content[0].text
+    raw_answer = response.content[0].text
+
+    # Parse and strip the SOURCES_USED marker the LLM appends per prompt instructions.
+    # Default to True so old responses (or parse failures) always show sources.
+    sources_relevant: bool = True
+    lines = raw_answer.strip().splitlines()
+    last_line = lines[-1].strip() if lines else ""
+    logger.info("[DEBUG] SOURCES_USED parse — last_line=%r", last_line)
+    if lines and last_line.startswith("SOURCES_USED:"):
+        marker_value = last_line.split(":", 1)[1].strip().lower()
+        sources_relevant = marker_value == "true"
+        answer = "\n".join(lines[:-1]).strip()
+    else:
+        answer = raw_answer.strip()
+    logger.info(
+        "[DEBUG] SOURCES_USED parse — sources_relevant=%s answer_preview=%r",
+        sources_relevant,
+        answer[:120],
+    )
 
     logger.info(
         "LLM response generated: customer=%s chunks=%d latency_ms=%d model=%s",
@@ -94,6 +112,7 @@ async def generate(
         model_name=settings.llm_model,
         model_temperature=0.0,
         response_text=answer,
+        sources_relevant=sources_relevant,
         latency_ms=latency_ms,
         created_by=created_by,
     )
@@ -105,12 +124,15 @@ async def generate(
     return QueryResponse(
         response_id=record.id,
         answer=answer,
+        sources_relevant=sources_relevant,
         sources=[
             SourceCitation(
                 chunk_id=chunk.chunk_id,
                 document_filename=chunk.document_filename,
                 chunk_index=chunk.chunk_index,
                 relevance_score=chunk.similarity_score,
+                page_number=chunk.page_number,
+                chunk_text=chunk.chunk_text,
             )
             for chunk in chunks
         ],

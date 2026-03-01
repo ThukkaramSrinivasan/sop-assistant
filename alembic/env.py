@@ -20,6 +20,7 @@ from app.models.chunk import DocumentChunk  # noqa: F401
 from app.models.customer import Customer  # noqa: F401
 from app.models.document import Document  # noqa: F401
 from app.models.ingestion_job import IngestionJob  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
