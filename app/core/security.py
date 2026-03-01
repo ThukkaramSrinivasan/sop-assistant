@@ -6,6 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from app.core.config import settings
+from app.core.logging_config import customer_id_ctx
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +51,15 @@ async def get_current_customer_id(
         )
 
     try:
-        return UUID(customer_id_str)
+        customer_id = UUID(customer_id_str)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="customer_id claim is not a valid UUID",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Inject into the logging context so every log line in this request
+    # automatically includes customer_id without changing each call site.
+    customer_id_ctx.set(str(customer_id))
+    return customer_id

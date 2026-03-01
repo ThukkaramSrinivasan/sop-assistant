@@ -211,8 +211,7 @@ async def run_worker() -> None:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
+    from app.core.logging_config import configure_logging
+
+    configure_logging()
     asyncio.run(run_worker())
