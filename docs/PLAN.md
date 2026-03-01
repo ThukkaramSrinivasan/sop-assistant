@@ -6,6 +6,9 @@ Emphasis: architecture, data modeling, AI workflows, and trade-offs.
 This is an assignment submission — clear design matters more than a fully running product.
 
 ## Phases Overview
+
+Note: Phases 1-5 were planned upfront. Phase 6 (B2B Auth + Frontend UI) was added mid-implementation based on requirements that emerged during development — specifically the need for proper multi-user B2B login and a demo-ready interface.
+
 ```
 Phase 1 → Project scaffold + DB schema + migrations
 Phase 2 → Ingestion pipeline (PDF → chunks → embeddings → job queue)
@@ -260,3 +263,19 @@ Upload a PDF → poll job status → status becomes `completed` → chunks with 
 
 **Phase 5:**
 > "Read CLAUDE.md and PLAN.md. Generate README.md with assumptions, design decisions, the trade-offs table from the plan, a Mermaid ER diagram, and an example audit response payload. Also generate AI_USAGE.md."
+## Phase 6: B2B Auth + Frontend UI
+
+### Tasks
+- [ ] Alembic migration for users table
+- [ ] passlib[bcrypt] added to requirements.txt
+- [ ] scripts/seed.py — creates 2 customers + 2 users, idempotent, prints ids
+- [ ] app/core/security.py — JWT updated to include user_id, get_current_user() added
+- [ ] POST /api/v1/auth/login
+- [ ] GET /api/v1/sop/documents
+- [ ] CORS middleware in app/main.py for http://localhost:5173
+- [ ] /frontend scaffolded with Vite + React + Tailwind
+- [ ] Login page
+- [ ] Documents page with upload + status badges
+- [ ] Chat page with message history and source chips
+- [ ] Shared Navbar with dark/light toggle and logout
+- [ ] frontend/.env and frontend/.env.example

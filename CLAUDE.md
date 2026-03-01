@@ -1,3 +1,7 @@
+# Note: Sections appear in the order they were added during development.
+# B2B Auth and Frontend sections at the bottom were added in Phase 6,
+# after the core backend was built and validated.
+
 # CLAUDE.md — AI Platform Backend (Unifize Assignment)
 
 ## What This Project Is
@@ -248,3 +252,40 @@ WORKER_POLL_INTERVAL_SECONDS=5
 - Do not use `print()` for logging
 - Do not store embeddings as plain float arrays — use pgvector `vector` type
 - Do not run the worker inside the FastAPI process — they are separate processes
+
+
+## B2B Authentication
+- Users belong to customers (companies) — one customer has many users
+- JWT contains both user_id and customer_id
+- get_current_customer_id() reads customer_id from JWT — used for all tenant isolation
+- get_current_user() reads full user record — used where user context is needed
+- Passwords hashed with bcrypt via passlib[bcrypt]
+- Login returns { token, customer_id, user_id, full_name }
+- Never reveal whether email or password was wrong — always same 401 message
+- Seed script at scripts/seed.py creates test data, is idempotent
+- Never return hashed_password in any API response
+
+## Users Table
+- id, customer_id (FK to customers), email (unique), full_name, 
+  hashed_password, is_active, created_at
+- Always scope user queries by customer_id
+
+## New Auth Endpoints
+- POST /api/v1/auth/login — { email, password } → { token, customer_id, user_id, full_name }
+- GET /api/v1/sop/documents — returns document list for authenticated customer
+
+## Frontend
+- Located in /frontend
+- Vite + React + TailwindCSS — no UI component libraries
+- JWT stored in React state only — never localStorage or sessionStorage
+- Dark mode via Tailwind dark: classes toggled on html element
+- API base URL from VITE_API_BASE_URL in frontend/.env
+- Runs on port 5173
+- CORS enabled in FastAPI for http://localhost:5173
+
+Pages:
+- /login — email + password, redirects to /documents on success
+- /documents — protected, lists documents, upload button with status badges
+- /chat — protected, chat interface with source chips per AI response
+
+Shared Navbar: app name, Documents link, Chat link, dark/light toggle, logout
