@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_customer_id
+from app.core.security import get_current_customer_id, get_current_user
 from app.models.ai_response import AIResponse
 from app.models.chunk import DocumentChunk
 from app.models.document import Document
@@ -41,20 +41,24 @@ router = APIRouter()
 )
 async def query_documents(
     body: QueryRequest,
-    customer_id: UUID = Depends(get_current_customer_id),
+    current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> QueryResponse:
     """Embed the query, retrieve the most relevant SOP chunks, and generate a
     cited AI answer.
 
     The full audit record (prompt, chunk IDs, latency, model params) is stored
-    automatically before the response is returned.
+    automatically before the response is returned.  conversation_id and
+    conversation_history are forwarded from the request body so multi-turn
+    sessions carry prior context into the prompt.
     """
     return await generate(
         query=body.query,
-        customer_id=customer_id,
-        created_by=customer_id,
+        customer_id=current_user.customer_id,
+        created_by=current_user.id,
         document_ids=body.document_ids,
+        conversation_id=body.conversation_id,
+        conversation_history=body.conversation_history,
         db=db,
     )
 

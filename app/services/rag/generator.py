@@ -9,9 +9,10 @@ written to ai_responses before this function returns. Records are never deleted.
 
 import logging
 import time
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import anthropic
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -39,21 +40,44 @@ async def generate(
     created_by: UUID,
     db: AsyncSession,
     document_ids: list[UUID] | None = None,
+    conversation_id: UUID | None = None,
+    conversation_history: list | None = None,
 ) -> QueryResponse:
     """Run the full RAG pipeline for a single query.
 
     Steps:
-      1. Embed the query (same model as ingestion — vectors must share a space).
-      2. Retrieve top-k chunks from pgvector, filtered by customer_id.
-      3. Build the prompt from retrieved context.
-      4. Call the Anthropic LLM (temperature=0 for deterministic, auditable output).
-      5. Persist the complete audit record to ai_responses.
-      6. Map to QueryResponse schema — never return the DB model directly.
+      1. Resolve conversation_id (generate new UUID if first turn).
+      2. Embed the query (same model as ingestion — vectors must share a space).
+      3. Retrieve top-k chunks from pgvector, filtered by customer_id.
+      4. Build the prompt from retrieved context (+ conversation history if present).
+      5. Call the Anthropic LLM (temperature=0 for deterministic, auditable output).
+      6. Persist the complete audit record to ai_responses.
+      7. Map to QueryResponse schema — never return the DB model directly.
     """
-    # 1. Embed query.
+    # 1. Resolve conversation context.
+    #    Generate a new conversation_id if this is the first turn.
+    if conversation_id is None:
+        conversation_id = uuid4()
+
+    # Count existing turns so we can assign a sequential turn_number.
+    count_result = await db.execute(
+        select(func.count()).select_from(AIResponse).where(
+            AIResponse.conversation_id == conversation_id
+        )
+    )
+    turn_number = (count_result.scalar() or 0) + 1
+
+    # Convert ConversationMessage objects to plain dicts for JSON storage
+    # and for the prompt builder (which accepts either dicts or objects).
+    history_dicts = [
+        (m.model_dump() if hasattr(m, "model_dump") else m)
+        for m in (conversation_history or [])
+    ]
+
+    # 2. Embed query.
     query_embedding = await embed_query(query)
 
-    # 2. Retrieve chunks — customer_id filter is mandatory.
+    # 3. Retrieve chunks — customer_id filter is mandatory.
     chunks = await retrieve_chunks(
         query_embedding=query_embedding,
         customer_id=customer_id,
@@ -62,8 +86,8 @@ async def generate(
         top_k=settings.rag_top_k,
     )
 
-    # 3. Build full prompt (stored verbatim for auditability).
-    prompt = build_prompt(query, chunks)
+    # 4. Build full prompt (stored verbatim for auditability).
+    prompt = build_prompt(query, chunks, conversation_history=history_dicts or None)
 
     # 4. Call Anthropic — temperature=0 required for regulated-domain auditability.
     client = _get_client()
@@ -113,8 +137,12 @@ async def generate(
         model_temperature=0.0,
         response_text=answer,
         sources_relevant=sources_relevant,
+        confidence_score=chunks[0].similarity_score if chunks else None,
         latency_ms=latency_ms,
         created_by=created_by,
+        conversation_id=conversation_id,
+        turn_number=turn_number,
+        conversation_history=history_dicts if history_dicts else None,
     )
     db.add(record)
     await db.commit()
@@ -138,4 +166,5 @@ async def generate(
         ],
         model=settings.llm_model,
         generated_at=record.created_at,
+        conversation_id=conversation_id,
     )

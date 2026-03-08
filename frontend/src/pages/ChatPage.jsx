@@ -48,6 +48,10 @@ export default function ChatPage({ token }) {
   const [loading, setLoading] = useState(false)
   // Tracks which source chip has its popover open: { msgIdx, srcIdx } | null
   const [openSource, setOpenSource] = useState(null)
+  // Conversation context — null on first turn, then reused for follow-ups
+  const [conversationId, setConversationId] = useState(null)
+  // Capped at 10 messages (5 turns), trimmed from front
+  const [history, setHistory] = useState([])
   const bottomRef = useRef()
 
   // Close any open popover when clicking outside
@@ -70,7 +74,11 @@ export default function ChatPage({ token }) {
     setOpenSource(null)
 
     try {
-      const requestBody = { query: question }
+      const requestBody = {
+        query: question,
+        conversation_id: conversationId,
+        conversation_history: history,
+      }
       console.log('[ChatPage] POST /api/v1/sop/query body:', requestBody)
       const data = await apiFetch('/api/v1/sop/query', {
         token,
@@ -80,6 +88,22 @@ export default function ChatPage({ token }) {
       console.log('[ChatPage] API response:', data)
       console.log('[ChatPage] sources_relevant:', data.sources_relevant)
       console.log('[ChatPage] sources:', data.sources)
+
+      // On first turn, record the server-assigned conversation_id for reuse.
+      if (conversationId === null) {
+        setConversationId(data.conversation_id)
+      }
+
+      // Append this turn to history and cap at 10 messages (5 turns).
+      setHistory(prev => {
+        const updated = [
+          ...prev,
+          { role: 'user', content: question },
+          { role: 'assistant', content: data.answer },
+        ]
+        return updated.slice(-10)
+      })
+
       const msg = {
         role: 'assistant',
         text: data.answer,
@@ -107,7 +131,21 @@ export default function ChatPage({ token }) {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col h-[calc(100vh-64px)]">
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Chat</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Chat</h1>
+        <button
+          onClick={() => {
+            setConversationId(null)
+            setHistory([])
+            setMessages([])
+            setOpenSource(null)
+          }}
+          className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title="Start a fresh conversation with no prior context"
+        >
+          New conversation
+        </button>
+      </div>
 
       <div className="flex-1 overflow-y-auto space-y-4 mb-4">
         {messages.length === 0 && (

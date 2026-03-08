@@ -284,3 +284,33 @@ Upload a PDF → poll job status → status becomes `completed` → chunks with 
 - [ ] Chat page with message history and source chips
 - [ ] Shared Navbar with dark/light toggle and logout
 - [ ] frontend/.env and frontend/.env.example
+
+---
+
+## Phase 7: Context Retention (Post-Implementation)
+
+Added after Phase 6. Enables multi-turn conversations without changing single-turn behavior.
+
+### Files Changed
+- `alembic/versions/005_add_conversation_fields.py` — NEW: adds `conversation_id`, `turn_number`, `conversation_history` to `ai_responses`
+- `app/models/ai_response.py` — 3 new fields + `ix_ai_responses_conversation_id` index
+- `app/schemas/query.py` — `ConversationMessage` schema; `conversation_id` + `conversation_history` added to `QueryRequest`; `conversation_id` added to `QueryResponse`
+- `app/services/rag/prompt.py` — `build_prompt()` accepts `conversation_history`; `_HISTORY_CAP = 6` constant; pronoun-resolution system instruction injected when history is present
+- `app/services/rag/generator.py` — generates or reuses `conversation_id`; counts `turn_number` via SQL COUNT; stores history as JSONB; returns `conversation_id` in response
+- `app/api/v1/query.py` — switched to `get_current_user`; passes `conversation_id` and `conversation_history` to `generate()`; fixes `created_by` to store actual `user_id`
+- `frontend/src/pages/ChatPage.jsx` — `conversationId` and `history` state; "New conversation" button; 10-message frontend cap via `.slice(-10)`
+- `README.md` — context retention row added to trade-offs table
+- `DELIVERABLES.md` — `ai_responses` schema, RAG workflow, and example payload updated
+- `tests/conftest.py` — `get_current_user` mock added; Python 3.13 `AsyncMock` regression fixed
+- `tests/test_query.py` — `conversation_id=uuid.uuid4()` added to `_MOCK_RESPONSE`
+
+### Design Decisions
+- **Server-side UUID**: `conversation_id` is generated in `generator.py` on the first turn — never supplied by the client, preventing spoofing or cross-tenant linking
+- **History cap split**: 6 messages in the prompt (token cost control), 10 messages in frontend state (UI scrollback); the two caps are independent
+- **JSONB storage**: full history stored per `ai_responses` row — the audit trail is complete even if the client loses its in-memory state
+- **Pronoun resolution**: system instruction injected only when history is present — zero overhead on single-turn queries
+- **`turn_number` via COUNT**: avoids a separate sequence/counter column; stays consistent with the existing append-only audit pattern
+
+### History Cap Rationale
+- **Prompt cap (6 messages = 3 turns)**: balances pronoun-resolution context against token cost; 3 turns covers the vast majority of follow-up chains in regulated SOP queries
+- **Frontend cap (10 messages = 5 turns)**: keeps UI scrollback manageable; older messages remain in the DB via JSONB and can be retrieved from the audit endpoint if needed

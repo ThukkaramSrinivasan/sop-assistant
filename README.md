@@ -313,6 +313,7 @@ reconstruct the source list.
 | DB / API models | Strictly separate | SQLModel dual-use | Clean boundary — DB internals (embeddings, file hashes) never leak to consumers |
 | Source relevance | LLM-emitted `SOURCES_USED` marker | Score threshold / phrase matching | The LLM itself knows whether it answered from context; hardcoded thresholds are brittle and require ongoing tuning |
 | File storage ⚠️ | Local disk (named Docker volume) | S3/GCS object storage | **Known limitation.** 200 PDFs × 5MB × 1000 customers ≈ 1TB; local disk cannot be shared across scaled API instances and has no redundancy. Production path: stream uploads to S3/GCS, store the key in the DB, worker downloads at processing time (~$23/month for 1TB on S3) |
+| Context retention | Last 3 turns (6 messages) sent in prompt, full history stored in `ai_responses` as JSONB, turns linked via `conversation_id` | Full session history in prompt | Controls token cost per query; resolves pronouns and references across follow-up questions. Production enhancement: query rewriting step rewrites ambiguous follow-ups into standalone questions before retrieval, improving chunk recall. |
 | Local development | `docker-compose up --build` (all services) | Running API, worker, frontend manually | Single command to start all three services eliminates environment drift and matches the production deployment model |
 
 ---

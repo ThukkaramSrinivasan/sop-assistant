@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, Index
+from sqlalchemy import Column, Index, JSON
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Field, SQLModel
@@ -10,7 +10,10 @@ from sqlmodel import Field, SQLModel
 
 class AIResponse(SQLModel, table=True):
     __tablename__ = "ai_responses"
-    __table_args__ = (Index("ix_ai_responses_customer_id", "customer_id"),)
+    __table_args__ = (
+        Index("ix_ai_responses_customer_id", "customer_id"),
+        Index("ix_ai_responses_conversation_id", "conversation_id"),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     customer_id: UUID = Field(nullable=False)
@@ -33,4 +36,12 @@ class AIResponse(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     # customer_id of the requesting user (same as customer_id in this model)
     created_by: UUID = Field(nullable=False)
+    # Conversation context — groups related turns for multi-turn sessions
+    conversation_id: Optional[UUID] = Field(default=None)
+    turn_number: Optional[int] = Field(default=None)
+    # Full message history passed to the LLM this turn — list of {role, content} dicts
+    conversation_history: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
     # AI response records are NEVER deleted — they are the audit trail
