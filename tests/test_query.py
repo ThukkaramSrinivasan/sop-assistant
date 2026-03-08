@@ -19,6 +19,7 @@ _MOCK_RESPONSE = QueryResponse(
     sources=[],
     model="claude-sonnet-4-20250514",
     generated_at=datetime.datetime.utcnow(),
+    conversation_id=uuid.uuid4(),
 )
 
 

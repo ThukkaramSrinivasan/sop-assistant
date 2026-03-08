@@ -299,3 +299,32 @@ Pages:
 - /chat — protected, chat interface with source chips per AI response
 
 Shared Navbar: app name, Documents link, Chat link, dark/light toggle, logout
+
+## Context Retention
+Multi-turn conversations are supported via `conversation_id` linkage and history injection into the prompt.
+
+### Backend
+- `conversation_id` is generated server-side (UUID4) on the first turn and returned in `QueryResponse`
+- Client passes `conversation_id` back on subsequent turns; server reuses it to link turns in `ai_responses`
+- `conversation_history` is an optional `list[ConversationMessage]` in `QueryRequest`
+- `turn_number` is computed via `COUNT` of existing `ai_responses` rows with the same `conversation_id`
+- `generate()` in generator.py accepts `conversation_id` and `conversation_history` — single-turn callers omit both
+
+### Prompt
+- History is capped at the last 6 messages before injection (`_HISTORY_CAP = 6` module constant in prompt.py)
+- When history is present, a pronoun-resolution instruction is prepended to the system prompt:
+  _"Use the conversation history to resolve pronouns and references… Do not answer from history alone."_
+- Single-turn queries (no history) produce identical prompts to before — no regression
+- Multi-turn format: `"Conversation so far:\n{lines}\n\nCurrent question: {query}"`
+
+### Frontend
+- `conversationId` and `history` stored in React state only — never localStorage or sessionStorage
+- First-turn response sets `conversationId`; subsequent turns include it in the request body
+- History capped at 10 messages (5 turns) in frontend state via `.slice(-10)`
+- "New conversation" button resets `conversationId`, `history`, `messages`, and `openSource`
+
+### DB
+- Three new columns on `ai_responses`: `conversation_id UUID`, `turn_number INT`, `conversation_history JSONB`
+- `conversation_id` is indexed (`ix_ai_responses_conversation_id`) for fast turn counting
+- Full history stored as JSONB per response row — audit trail is complete even if client loses state
+- Added via `alembic/versions/005_add_conversation_fields.py`
