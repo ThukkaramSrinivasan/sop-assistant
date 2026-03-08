@@ -137,6 +137,7 @@ async def generate(
         model_temperature=0.0,
         response_text=answer,
         sources_relevant=sources_relevant,
+        confidence_score=chunks[0].similarity_score if chunks else None,
         latency_ms=latency_ms,
         created_by=created_by,
         conversation_id=conversation_id,
