@@ -18,11 +18,6 @@ def _format_source_header(index: int, chunk: RetrievedChunk) -> str:
     return f"[Source {index} — {chunk.document_filename}, section {chunk.chunk_index}{page_label}]"
 
 
-def _truncate_chunk_text(chunk_text: str) -> str:
-    if len(chunk_text) <= _MAX_CHARS_PER_CHUNK:
-        return chunk_text
-    return chunk_text[:_MAX_CHARS_PER_CHUNK].rstrip() + "\n...[truncated for prompt size]"
-
 
 def _build_source_blocks(chunks: list[RetrievedChunk]) -> str:
     if not chunks:
