@@ -86,6 +86,14 @@ async def generate(
         top_k=settings.rag_top_k,
     )
 
+    logger.info(
+        "RAG retrieval complete: customer=%s chunks=%d scoped_docs=%d has_history=%s",
+        customer_id,
+        len(chunks),
+        len(document_ids or []),
+        bool(history_dicts),
+    )
+
     # 4. Build full prompt (stored verbatim for auditability).
     prompt = build_prompt(query, chunks, conversation_history=history_dicts or None)
 

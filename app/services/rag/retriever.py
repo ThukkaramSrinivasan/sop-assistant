@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 # Module-level singleton — shares the HTTP connection pool across calls.
 _openai: AsyncOpenAI | None = None
+_MIN_SIMILARITY_SCORE = 0.2
+_MAX_TOP_K = 8
 
 
 def _get_client() -> AsyncOpenAI:
@@ -69,6 +71,8 @@ async def retrieve_chunks(
     document_ids scopes the search to a subset of the customer's documents when
     the caller wants to ask questions about specific SOPs rather than all of them.
     """
+    requested_top_k = top_k
+    safe_top_k = max(1, min(top_k, _MAX_TOP_K))
     distance_expr = DocumentChunk.embedding.cosine_distance(query_embedding)
 
     conditions = [
@@ -91,14 +95,22 @@ async def retrieve_chunks(
         .join(Document, Document.id == DocumentChunk.document_id)
         .where(*conditions)
         .order_by(distance_expr)
-        .limit(top_k)
+        .limit(safe_top_k)
     )
 
     result = await db.execute(stmt)
     rows = result.all()
 
+    filtered_rows = [row for row in rows if float(row.similarity) >= _MIN_SIMILARITY_SCORE]
+
     logger.debug(
-        "Retrieved %d chunks for customer=%s (top_k=%d)", len(rows), customer_id, top_k
+        "Retrieved %d/%d chunks for customer=%s (requested_top_k=%d safe_top_k=%d min_similarity=%.2f)",
+        len(filtered_rows),
+        len(rows),
+        customer_id,
+        requested_top_k,
+        safe_top_k,
+        _MIN_SIMILARITY_SCORE,
     )
 
     return [
@@ -110,5 +122,5 @@ async def retrieve_chunks(
             similarity_score=float(row.similarity),
             page_number=row.page_number,
         )
-        for row in rows
+        for row in filtered_rows
     ]

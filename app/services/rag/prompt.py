@@ -10,6 +10,23 @@ What is stored is exactly what is sent to the LLM — no hidden transformations.
 from app.services.rag.retriever import RetrievedChunk
 
 _HISTORY_CAP = 6  # max messages (3 turns) injected into prompt
+_MAX_CHARS_PER_CHUNK = 1200
+
+
+def _format_source_header(index: int, chunk: RetrievedChunk) -> str:
+    page_label = f", page {chunk.page_number}" if chunk.page_number is not None else ""
+    return f"[Source {index} — {chunk.document_filename}, section {chunk.chunk_index}{page_label}]"
+
+
+
+def _build_source_blocks(chunks: list[RetrievedChunk]) -> str:
+    if not chunks:
+        return "[No context documents available]"
+
+    return "\n\n".join(
+        f"{_format_source_header(i, chunk)}\n{_truncate_chunk_text(chunk.chunk_text)}"
+        for i, chunk in enumerate(chunks, start=1)
+    )
 
 
 def build_prompt(
@@ -32,14 +49,7 @@ def build_prompt(
     Single-turn queries (empty or None conversation_history) produce an identical
     prompt to the pre-conversation implementation — no behaviour change.
     """
-    source_blocks = "\n\n".join(
-        f"[Source {i} — {chunk.document_filename}, section {chunk.chunk_index}]\n"
-        f"{chunk.chunk_text}"
-        for i, chunk in enumerate(chunks, start=1)
-    )
-
-    if not source_blocks:
-        source_blocks = "[No context documents available]"
+    source_blocks = _build_source_blocks(chunks)
 
     # Cap history at the last _HISTORY_CAP messages (trim from front).
     history = list(conversation_history or [])
@@ -75,6 +85,7 @@ def build_prompt(
         "You are an AI assistant that analyzes Standard Operating Procedures (SOPs).\n"
         "Use ONLY the context provided below. Do not use any outside knowledge.\n"
         "If the answer is not in the context, explicitly say so.\n"
+        "Prefer concise answers that still preserve important caveats.\n"
         "Always cite sources using [Source N] notation.\n"
         + pronoun_instruction
         + "After your answer, on a new line, output exactly this format:\n"

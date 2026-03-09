@@ -34,6 +34,26 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
+def _dedupe_document_ids(document_ids: list[UUID] | None) -> list[UUID] | None:
+    """Remove duplicate document IDs while preserving caller order.
+
+    Keeping this close to the API makes the downstream generator contract a bit
+    cleaner, and it avoids redundant `IN (...)` filters when a client retries
+    with duplicated IDs.
+    """
+    if not document_ids:
+        return None
+
+    deduped: list[UUID] = []
+    seen: set[UUID] = set()
+    for document_id in document_ids:
+        if document_id in seen:
+            continue
+        seen.add(document_id)
+        deduped.append(document_id)
+    return deduped
+
+
 @router.post(
     "/query",
     response_model=QueryResponse,
@@ -52,11 +72,19 @@ async def query_documents(
     conversation_history are forwarded from the request body so multi-turn
     sessions carry prior context into the prompt.
     """
+    scoped_document_ids = _dedupe_document_ids(body.document_ids)
+    logger.info(
+        "Submitting SOP query: customer=%s scoped_docs=%d has_history=%s",
+        current_user.customer_id,
+        len(scoped_document_ids or []),
+        bool(body.conversation_history),
+    )
+
     return await generate(
         query=body.query,
         customer_id=current_user.customer_id,
         created_by=current_user.id,
-        document_ids=body.document_ids,
+        document_ids=scoped_document_ids,
         conversation_id=body.conversation_id,
         conversation_history=body.conversation_history,
         db=db,
@@ -110,6 +138,8 @@ async def get_response(
             select(
                 DocumentChunk.id,
                 DocumentChunk.chunk_index,
+                DocumentChunk.page_number,
+                DocumentChunk.chunk_text,
                 Document.filename,
             )
             .join(Document, Document.id == DocumentChunk.document_id)
@@ -127,6 +157,8 @@ async def get_response(
                 document_filename=chunk_map[cid].filename,
                 chunk_index=chunk_map[cid].chunk_index,
                 relevance_score=0.0,  # not stored; see note above
+                page_number=chunk_map[cid].page_number,
+                chunk_text=chunk_map[cid].chunk_text,
             )
             for cid in chunk_ids
             if cid in chunk_map
